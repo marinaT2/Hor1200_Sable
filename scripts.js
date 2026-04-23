@@ -4,77 +4,37 @@
 // =====================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ===== Audio Player Setup =====
-    const playBtn = document.getElementById('playBtn');
-    const audioFile = document.getElementById('audioFile');
-    const progressBar = document.querySelector('.progress-bar');
-    const progressFill = document.getElementById('progressFill');
-    const timeDisplay = document.querySelector('.time-display');
-    
-    let isPlaying = false;
-    
-    function formatTime(seconds) {
-        if (!isFinite(seconds)) return '0:00';
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const isLowPowerDevice =
+        (typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4) ||
+        (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4) ||
+        reduceMotionQuery.matches;
+
+    if (isLowPowerDevice) {
+        document.body.classList.add('low-power-mode');
     }
-    
-    playBtn.addEventListener('click', () => {
-        if (isPlaying) {
-            audioFile.pause();
-            playBtn.textContent = '▶';
-            playBtn.style.animation = 'none';
-            isPlaying = false;
-        } else {
-            if (!audioFile.src) {
-                alert('Veuillez ajouter un fichier audio. Remplacez le src dans le HTML avec le chemin de votre fichier audio.');
-                return;
-            }
-            audioFile.play().catch(err => {
-                console.log('Lecture non disponible:', err.message);
-            });
-            playBtn.textContent = '⏸';
-            playBtn.style.animation = 'pulse-glow 1s ease-in-out infinite';
-            isPlaying = true;
+
+    // ===== External video source with automatic local fallback =====
+    const podcastVideo = document.querySelector('.podcast-video');
+    if (podcastVideo) {
+        const externalSrc = (podcastVideo.dataset.externalSrc || '').trim();
+        const localSrc = (podcastVideo.dataset.localSrc || '').trim();
+
+        if (externalSrc) {
+            const switchToLocal = () => {
+                if (podcastVideo.dataset.fallbackApplied === '1') return;
+                if (!localSrc) return;
+                podcastVideo.dataset.fallbackApplied = '1';
+                podcastVideo.src = localSrc;
+                podcastVideo.load();
+            };
+
+            podcastVideo.addEventListener('error', switchToLocal, { once: true });
+            podcastVideo.src = externalSrc;
+            podcastVideo.load();
         }
-    });
-    
-    audioFile.addEventListener('timeupdate', () => {
-        const percent = (audioFile.currentTime / audioFile.duration) * 100;
-        progressFill.style.width = percent + '%';
-        updateTimeDisplay();
-    });
-    
-    function updateTimeDisplay() {
-        const current = formatTime(audioFile.currentTime);
-        const duration = formatTime(audioFile.duration);
-        timeDisplay.textContent = `${current} / ${duration}`;
     }
-    
-    progressBar.addEventListener('click', (e) => {
-        if (!audioFile.duration) return;
-        const rect = progressBar.getBoundingClientRect();
-        const percent = (e.clientX - rect.left) / rect.width;
-        audioFile.currentTime = percent * audioFile.duration;
-    });
-    
-    audioFile.addEventListener('ended', () => {
-        playBtn.textContent = '▶';
-        isPlaying = false;
-        playBtn.style.animation = 'none';
-        progressFill.style.width = '0%';
-        audioFile.currentTime = 0;
-        updateTimeDisplay();
-    });
-    
-    audioFile.addEventListener('error', () => {
-        console.log('Erreur: Fichier audio non trouvé ou inaccessible');
-        timeDisplay.textContent = '-- / --';
-    });
-    
-    updateTimeDisplay();
-    
+
     // ===== Scroll-based Animations =====
     const observerOptions = {
         threshold: 0.15,
@@ -100,17 +60,81 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ===== Mouse parallax effect on hero =====
     const heroSection = document.querySelector('.hero-section');
-    if (heroSection) {
+    if (heroSection && !isLowPowerDevice) {
+        let rafId = null;
+        let latestMouseX = 0;
+        let latestMouseY = 0;
+
         document.addEventListener('mousemove', (e) => {
-            const xPos = (e.clientX / window.innerWidth - 0.5) * 2;
-            const yPos = (e.clientY / window.innerHeight - 0.5) * 2;
-            
-            if (heroSection.offsetHeight < window.innerHeight * 2) {
-                heroSection.style.transform = `translate(${xPos * 10}px, ${yPos * 10}px)`;
+            latestMouseX = e.clientX;
+            latestMouseY = e.clientY;
+
+            if (rafId) return;
+            rafId = window.requestAnimationFrame(() => {
+                rafId = null;
+                const xPos = (latestMouseX / window.innerWidth - 0.5) * 2;
+                const yPos = (latestMouseY / window.innerHeight - 0.5) * 2;
+                
+                if (heroSection.offsetHeight < window.innerHeight * 2) {
+                    heroSection.style.transform = `translate(${xPos * 6}px, ${yPos * 6}px)`;
+                }
+            });
+        }, { passive: true });
+    }
+
+    // ===== Dynamically add CSS for animations =====
+    if (!document.querySelector('style[data-cosmic]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-cosmic', '');
+        style.textContent = `
+            @keyframes shimmer {
+                0% { background-position: -1000px 0; }
+                100% { background-position: 1000px 0; }
             }
-        });
+            
+            @keyframes gradient-shift {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+            }
+            
+            .section-title {
+                background-size: 200% 200%;
+                animation: gradient-shift 6s ease infinite;
+            }
+        `;
+        document.head.appendChild(style);
     }
     
+    // ===== Scroll indicator =====
+    const scrollIndicator = document.querySelector('[data-scroll-indicator]');
+    let scrollRaf = null;
+    window.addEventListener('scroll', () => {
+        if (!scrollIndicator) return;
+        if (scrollRaf) return;
+        scrollRaf = window.requestAnimationFrame(() => {
+            scrollRaf = null;
+            const scrolled = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            scrollIndicator.style.width = scrolled + '%';
+        });
+    }, { passive: true });
+    
+    // ===== Viewport fade effect (creates depth) =====
+    if (!isLowPowerDevice) {
+        const sections = document.querySelectorAll('section');
+        const pageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                }
+            });
+        }, { threshold: 0.05 });
+        
+        sections.forEach(section => {
+            section.style.opacity = '0.95';
+            pageObserver.observe(section);
+        });
+    }
+
     // ===== Smooth scroll anchor navigation =====
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
@@ -132,59 +156,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // ===== Dynamically add CSS for animations =====
-    if (!document.querySelector('style[data-cosmic]')) {
-        const style = document.createElement('style');
-        style.setAttribute('data-cosmic', '');
-        style.textContent = `
-            @keyframes pulse-glow {
-                0%, 100% { 
-                    box-shadow: 0 0 20px rgba(167, 139, 250, 0.3), 0 8px 24px rgba(167, 139, 250, 0.2);
-                }
-                50% { 
-                    box-shadow: 0 0 40px rgba(167, 139, 250, 0.6), 0 12px 32px rgba(167, 139, 250, 0.4);
-                }
-            }
-            
-            @keyframes shimmer {
-                0% { background-position: -1000px 0; }
-                100% { background-position: 1000px 0; }
-            }
-            
-            @keyframes gradient-shift {
-                0%, 100% { background-position: 0% 50%; }
-                50% { background-position: 100% 50%; }
-            }
-            
-            .section-title {
-                background-size: 200% 200%;
-                animation: gradient-shift 6s ease infinite;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // ===== Scroll indicator =====
-    window.addEventListener('scroll', () => {
-        const scrolled = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
-        const scrollIndicator = document.querySelector('[data-scroll-indicator]');
-        if (scrollIndicator) {
-            scrollIndicator.style.width = scrolled + '%';
-        }
-    });
-    
-    // ===== Viewport fade effect (creates depth) =====
-    const sections = document.querySelectorAll('section');
-    const pageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-            }
-        });
-    }, { threshold: 0.05 });
-    
-    sections.forEach(section => {
-        section.style.opacity = '0.95';
-        pageObserver.observe(section);
-    });
 });

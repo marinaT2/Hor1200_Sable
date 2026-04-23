@@ -80,15 +80,19 @@
         <h3 class="podcast-title">🎙️ La Fièvre du Sable</h3>
         <p class="podcast-tagline">Un format podcast fun pour une enquête sérieuse !</p>
         
-        <div class="audio-player">
-            <div class="player-controls">
-                <button class="play-btn" id="playBtn">▶</button>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <span class="time-display">0:00 / 0:00</span>
-            </div>
-            <audio id="audioFile" src=""></audio>
+        <div class="podcast-video-wrapper">
+            <video
+                class="podcast-video"
+                controls
+                preload="metadata"
+                data-external-src="https://share.descript.com/view/5bGd1hv5aUP"
+                data-local-src=""
+            >
+                Votre navigateur ne prend pas en charge la lecture video.
+            </video>
+            <p class="video-fallback">
+                Si la vidéo ne se lance pas, <a href="https://share.descript.com/view/5bGd1hv5aUP" target="_blank" rel="noopener noreferrer">ouvrir la version en ligne</a>.
+            </p>
         </div>
         
         <p class="podcast-description">
