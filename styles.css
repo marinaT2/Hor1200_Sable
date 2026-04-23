@@ -335,6 +335,16 @@ body::before {
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
 }
 
+.podcast-embed {
+    display: block;
+    width: 100%;
+    min-height: 420px;
+    border: 0;
+    border-radius: 10px;
+    background: #000;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
+}
+
 .video-fallback {
     margin-top: 0.6rem;
     font-size: 0.86rem;
@@ -682,6 +692,10 @@ body::before {
     
     .podcast-title {
         font-size: 1.5rem;
+    }
+
+    .podcast-embed {
+        min-height: 280px;
     }
     
     .podcast-conclusion {

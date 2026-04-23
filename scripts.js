@@ -14,27 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('low-power-mode');
     }
 
-    // ===== External video source with automatic local fallback =====
-    const podcastVideo = document.querySelector('.podcast-video');
-    if (podcastVideo) {
-        const externalSrc = (podcastVideo.dataset.externalSrc || '').trim();
-        const localSrc = (podcastVideo.dataset.localSrc || '').trim();
-
-        if (externalSrc) {
-            const switchToLocal = () => {
-                if (podcastVideo.dataset.fallbackApplied === '1') return;
-                if (!localSrc) return;
-                podcastVideo.dataset.fallbackApplied = '1';
-                podcastVideo.src = localSrc;
-                podcastVideo.load();
-            };
-
-            podcastVideo.addEventListener('error', switchToLocal, { once: true });
-            podcastVideo.src = externalSrc;
-            podcastVideo.load();
-        }
-    }
-
     // ===== Scroll-based Animations =====
     const observerOptions = {
         threshold: 0.15,
